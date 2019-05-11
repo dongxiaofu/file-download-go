@@ -11,21 +11,44 @@ import (
 	"encoding/json"
 	"os"
 	"io/ioutil"
+	"flag"
 )
 
+/**
+ go run main.go -host=chugang.net -path=/ -filename=index.html
+ go run main.go -host=i1.whymtj.com -path=/uploads/tu/201904/9999/75880a6ff0.jpg?t==3337 -filename=g.jpg
+ */
+
 func main() {
+
+	hostParam := flag.String("host", "", "host, 必填")
+	pathParam := flag.String("path", "", "path，必填")
+	filenameParam := flag.String("filename", "", "filename，必填")
+
+	flag.Parse()
+
+	if *hostParam == "" {
+		fmt.Println("请输入host")
+		return
+	}
+
+	if *pathParam == "" {
+		fmt.Println("请输入path")
+		return
+	}
+
+	if *filenameParam == "" {
+		fmt.Println("请输入filename")
+		return
+	}
+
 	var dbFile string = "tmp"
 
-	//var host string = "www.chugang.net"
-	var host string = "i1.whymtj.com"
-	var path string = "/uploads/tu/201904/9999/75880a6ff0.jpg?t==3337"
-	//var path string = " /?t=345 "
-	var filename = "test.jpg"
-	//var filename = "test.html"
-	//var filename2 = "test2"
+	var host string = *hostParam
+	var path string = *pathParam
+	var filename = *filenameParam
 	var port string = "80"
 	address := host + ":" + port
-	//address += path
 	fmt.Println(address)
 	// 发起 http 请求
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
@@ -146,6 +169,7 @@ func main() {
 				fmt.Println("error: ", err, b)
 			}
 			saveToFile(string(b), dbFile)
+
 		}else{
 
 			fileSize2Int64 := getFileSize(filename)
