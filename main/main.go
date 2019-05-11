@@ -107,20 +107,18 @@ func main() {
 
 	var fileSize int
 
-	fileSize = fileInfo.FileSize
+	fileSize = fileInfo2.FileSize
 
 	fmt.Println(fileSize)
 
 	defer tcpConn.Close()
 
-	length := length2 + headerLength + 5
-	fmt.Println(length)
+	length := length2 + headerLength
 	responseContentBuf := make([]byte, length, length)
 	leng := 0
 	var k int
 	for {
 		n, _ := tcpConn.Read(responseContentBuf[leng:])
-		fmt.Println(k)
 		k++
 		if n > 0 {
 
@@ -151,12 +149,28 @@ func main() {
 		}else{
 
 			fileSize2Int64 := getFileSize(filename)
+			fmt.Println("===========================fileSize2Int64=====start")
+			fmt.Println(fileSize2Int64)
+			fmt.Println("===========================fileSize2Int64=====end")
 			fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
 			fileSize2, _ := strconv.Atoi(fileSizeStr)
 
-			if length == fileSize2 {
+			fmt.Println("===========================length2=====start")
+			fmt.Println(length2)
+			fmt.Println("===========================length2=====end")
+
+			fmt.Println("===========================fileSize2=====start")
+			fmt.Println(fileSize2)
+			fmt.Println("===========================fileSize2=====end")
+
+			if length2 - fileSize2 >= 0 && length2 - fileSize2 < 5 {
 				os.Remove(dbFile)
 			}
+
+			if fileSize2 - length2 >= 0 && fileSize2 - length2 < 5 {
+				os.Remove(dbFile)
+			}
+
 			break
 		}
 
