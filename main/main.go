@@ -127,36 +127,11 @@ func main() {
 	responseContentBuf := make([]byte, length, length)
 	leng := 0
 	var n int
+	var k int
 	for {
 		n, _ := tcpConn.Read(responseContentBuf[leng:])
-		//fmt.Println(responseContentBuf)
-
-		//response := string(responseContentBuf[:leng])
-		//fmt.Println(response)
-		//
-		//s := strings.Split(response, "\r\n\r\n")
-		//var content string
-		//if len(s) == 2 {
-		//	content = s[1]
-		//	fileSize += n - headerLength
-		//}else{
-		//	content = s[0]
-		//	fileSize += n
-		//}
-		//
-		//appendToFile(filename, content)
-		//
-		//
-		////
-		//// 将文件信息保存到文件中
-		//fileInfo.FileSize = fileSize
-		//
-		//b, err := json.Marshal(fileInfo)
-		//if err != nil {
-		//	fmt.Println("error: ", err, b)
-		//}
-		//
-		//saveToFile(string(b), dbFile)
+		fmt.Println(k)
+		k++
 
 		if n > 0 {
 			leng += n
@@ -171,7 +146,7 @@ func main() {
 	}
 
 	response := string(responseContentBuf)
-	fmt.Println(response)
+	//fmt.Println(response)
 
 	s := strings.Split(response, "\r\n\r\n")
 	var content string
