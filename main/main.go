@@ -105,20 +105,11 @@ func main() {
 
 	length2, headerLength := getResponseHeader(tcpConn2)
 
-
-
 	var fileSize int
 
-	fileSize = 0
+	fileSize = fileInfo.FileSize
 
 	fmt.Println(fileSize)
-
-	//firstResponseContent := make([]byte, 400)
-	//tcpConn.Read(firstResponseContent)
-	////fmt.Println(string(firstResponseContent), n)
-	//length := getResponseContentLength(string(firstResponseContent))
-	////fmt.Println(length, err2, n)
-	//return
 
 	defer tcpConn.Close()
 
@@ -126,57 +117,53 @@ func main() {
 	fmt.Println(length)
 	responseContentBuf := make([]byte, length, length)
 	leng := 0
-	var n int
 	var k int
 	for {
 		n, _ := tcpConn.Read(responseContentBuf[leng:])
 		fmt.Println(k)
 		k++
-
 		if n > 0 {
+
+			response := string(responseContentBuf[leng:leng + n])
+			s := strings.Split(response, "\r\n\r\n")
+
+			var content string
+			if len(s) == 2 {
+				content = s[1]
+				fileSize += n - headerLength
+			}else{
+				content = s[0]
+				fileSize += n
+			}
+
+			appendToFile(filename, content)
+
 			leng += n
+
+			// 将文件信息保存到文件中
+			fileInfo.FileSize = fileSize
+
+			b, err := json.Marshal(fileInfo)
+			if err != nil {
+				fmt.Println("error: ", err, b)
+			}
+			saveToFile(string(b), dbFile)
 		}else{
-			if n < length {
-				fmt.Println(n, "============================Over")
+
+			fileSize2Int64 := getFileSize(filename)
+			fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
+			fileSize2, _ := strconv.Atoi(fileSizeStr)
+
+			if length == fileSize2 {
 				os.Remove(dbFile)
-				//return
 			}
 			break
 		}
+
+		//time.Sleep(time.Duration(40) * time.Second)
 	}
 
-	response := string(responseContentBuf)
-	//fmt.Println(response)
-
-	s := strings.Split(response, "\r\n\r\n")
-	var content string
-	if len(s) == 2 {
-		content = s[1]
-	}else{
-		content = s[0]
-	}
-
-	fmt.Println(content)
-
-	appendToFile(filename, content)
-
-	fileSize += n - headerLength
-	//
-	//// 将文件信息保存到文件中
-	//fileInfo.FileSize = fileSize
-	//
-	//b, err := json.Marshal(fileInfo)
-	//if err != nil {
-	//	fmt.Println("error: ", err, b)
-	//}
-	//
-	//saveToFile(string(b), dbFile)
-	//
-	//if n < length {
-	//	fmt.Println(n, "============================Over")
-	//	os.Remove(dbFile)
-	//	return
-	//}
+	return
 }
 
 func getResponseContentLength(responseStr string) int {
@@ -297,6 +284,14 @@ func appendToFile(fileName string, content string) error {
 	}
 	defer f.Close()
 	return err
+}
+
+func getFileSize(filename string) int64  {
+
+	fileInfo, _ := os.Stat(filename)
+	fileSize := fileInfo.Size()
+
+	return fileSize
 }
 
 type fileMeta struct {
