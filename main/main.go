@@ -24,6 +24,11 @@ go run main.go -host=dev.cg.com -path=/t.json -filename=t.json -sleep=0
 
 func main() {
 
+	//var newResponseContentBuf2 []byte
+	//fmt.Println(len(newResponseContentBuf2))
+	//return
+
+
 	hostParam := flag.String("host", "", "host, 必填")
 	pathParam := flag.String("path", "", "path，必填")
 	filenameParam := flag.String("filename", "", "filename，必填")
@@ -168,7 +173,7 @@ func main() {
 	defer tcpConn.Close()
 
 	// 2 是 \r\n\r\n 的长度。为何不是4
-	length := length2 + headerLength + 3
+	length := length2 + headerLength + strings.Count("\r\n\r\n", "")
 
 	fmt.Println("===========================length=====start")
 	fmt.Println(length)
@@ -183,17 +188,34 @@ func main() {
 	var k int
 	var newOffset int64 = 0
 	for {
+
+		var newResponseContentBuf []byte
+		//if cap(responseContentBuf) == length {
+		//	newResponseContentBuf = make([]byte, len(responseContentBuf)*2, cap(responseContentBuf) * 2)
+		//	copy(newResponseContentBuf, responseContentBuf)
+		//}
+
 		length++
 
 		fmt.Println("===========================k=====start")
 		fmt.Println(k)
 		fmt.Println("===========================k=====end")
-		n, _ := tcpConn.Read(responseContentBuf[leng:])
+
+		var n int
+		if len(newResponseContentBuf) > 0 {
+			n, _ = tcpConn.Read(newResponseContentBuf[leng:])
+		}else{
+			// 每次读取的数据，都包括 http header，为何不断点下载的时候，为何上文分配的
+			// length := length2 + headerLength + strings.Count("\r\n\r\n", "")
+			// 空间够用？应该是缺少很多个 http header 头部长度才正确
+			n, _ = tcpConn.Read(responseContentBuf[leng:])
+		}
+
 		k++
 
-		//fmt.Println("===========================responseContentBuf=====start")
-		//fmt.Println(string(responseContentBuf))
-		//fmt.Println("===========================responseContentBuf=====end")
+		fmt.Println("===========================responseContentBuf=====start")
+		fmt.Println(string(responseContentBuf))
+		fmt.Println("===========================responseContentBuf=====end")
 
 		fmt.Println("===========================leng=====start-for")
 		fmt.Println(leng)
