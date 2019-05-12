@@ -51,6 +51,49 @@ func main() {
 	var filename = *filenameParam
 	var port string = "80"
 	address := host + ":" + port
+
+	// 读取下载文件的元数据
+	var fileInfo2 fileMeta
+	fileInfoString := readFile(dbFile)
+	if fileInfoString == "" {
+		fileInfo2 = fileMeta{
+			Url:        address,
+			FileOffset: 0,
+			FileSize:0,
+		}
+	} else {
+		var fileInfoJson = []byte(fileInfoString)
+
+		err5 := json.Unmarshal(fileInfoJson, &fileInfo2)
+		if err5 != nil {
+			panic("error")
+			return
+		}
+	}
+
+	fileSize2Int64 := getFileSize(filename)
+	fmt.Println("===========================fileSize2Int64=====start")
+	fmt.Println(fileSize2Int64)
+	fmt.Println("===========================fileSize2Int64=====end")
+	fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
+	fileSize2, _ := strconv.Atoi(fileSizeStr)
+
+	fmt.Println("===========================length2=====start")
+	fmt.Println(fileInfo2.FileSize)
+	fmt.Println("===========================length2=====end")
+
+	fmt.Println("===========================fileSize2=====start")
+	fmt.Println(fileSize2)
+	fmt.Println("===========================fileSize2=====end")
+
+	if fileSize2 > 0 && fileInfo2.FileSize == fileSize2 {
+		os.Remove(dbFile)
+		fmt.Println("下载完毕")
+		return
+	}
+
+
+
 	// 发起 http 请求
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 
@@ -75,25 +118,6 @@ func main() {
 
 	requestHeaderGet := "GET " + path + " HTTP/1.1 \r\n"
 	buffer.WriteString(requestHeaderGet)
-
-	// 读取下载文件的元数据
-	var fileInfo2 fileMeta
-	fileInfoString := readFile(dbFile)
-	if fileInfoString == "" {
-		fileInfo2 = fileMeta{
-			Url:        address,
-			FileOffset: 0,
-			FileSize:0,
-		}
-	} else {
-		var fileInfoJson = []byte(fileInfoString)
-
-		err5 := json.Unmarshal(fileInfoJson, &fileInfo2)
-		if err5 != nil {
-			panic("error")
-			return
-		}
-	}
 
 	if fileInfo2.FileOffset != 0 {
 		fmt.Println("yes")
@@ -202,7 +226,7 @@ func main() {
 			break
 		}
 
-
+		fmt.Printf("%d 次保存\n", k)
 		if *isSleepParam != "0" {
 			time.Sleep(time.Duration(40) * time.Second)
 		}
@@ -336,7 +360,10 @@ func appendToFile(fileName string, content string, offset int64) (int64) {
 
 func getFileSize(filename string) int64  {
 
-	fileInfo, _ := os.Stat(filename)
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		return 0
+	}
 	fileSize := fileInfo.Size()
 
 	return fileSize
