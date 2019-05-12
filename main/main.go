@@ -17,7 +17,9 @@ import (
 
 /**
  go run main.go -host=chugang.net -path=/ -filename=index.html -sleep=0
- go run main.go -host=i1.whymtj.com -path=/uploads/tu/201904/9999/75880a6ff0.jpg?t==3337 -filename=g9.jpg -sleep=0
+ go run main.go -host=i1.whymtj.com -path=/uploads/tu/201905/9999/f785f95cc1.jpg?t==3337 -filename=g9.jpg -sleep=0
+go run main.go -host=dev.cg.com -path=/t.json -filename=t.json -sleep=0
+395135
  */
 
 func main() {
@@ -78,9 +80,9 @@ func main() {
 	fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
 	fileSize2, _ := strconv.Atoi(fileSizeStr)
 
-	fmt.Println("===========================length2=====start")
-	fmt.Println(fileInfo2.FileSize)
-	fmt.Println("===========================length2=====end")
+	//fmt.Println("===========================length2=====start")
+	//fmt.Println(fileInfo2.FileSize)
+	//fmt.Println("===========================length2=====end")
 
 	fmt.Println("===========================fileSize2=====start")
 	fmt.Println(fileSize2)
@@ -121,7 +123,7 @@ func main() {
 
 	if fileInfo2.FileOffset != 0 {
 		fmt.Println("yes")
-		rangeHeader := "Range:bytes=" + strconv.Itoa(fileInfo2.FileOffset) + "-\r\n"
+		rangeHeader := "Range:bytes=" + strconv.Itoa(fileSize2) + "-\r\n"
 		buffer.WriteString(rangeHeader)
 	}
 
@@ -133,6 +135,9 @@ func main() {
 	buffer.WriteString(requestHeaderHost)
 	requestHeader := buffer.String()
 
+	//fmt.Println(requestHeader)
+	//return
+
 	_, err3 := tcpConn.Write([]byte(requestHeader))
 
 	checkError(err3)
@@ -143,6 +148,10 @@ func main() {
 	checkError(err33)
 
 	length2, headerLength := getResponseHeader(tcpConn2)
+
+	fmt.Println("===========================length2=====start")
+	fmt.Println(length2)
+	fmt.Println("===========================length2=====end")
 
 	var fileOffset int
 	var fileSize int
@@ -159,24 +168,44 @@ func main() {
 	defer tcpConn.Close()
 
 	// 2 是 \r\n\r\n 的长度。为何不是4
-	length := length2 + headerLength + 2
+	length := length2 + headerLength + 3
 
+	fmt.Println("===========================length=====start")
+	fmt.Println(length)
+	fmt.Println("===========================length=====end")
+
+	responseContentBuf := make([]byte, length)
 	leng := 0
+	fmt.Println("===========================leng=====start")
+	fmt.Println(leng)
+	fmt.Println("===========================leng=====end")
+
 	var k int
 	var newOffset int64 = 0
 	for {
 		length++
-		responseContentBuf := make([]byte, length)
+
 		fmt.Println("===========================k=====start")
 		fmt.Println(k)
 		fmt.Println("===========================k=====end")
 		n, _ := tcpConn.Read(responseContentBuf[leng:])
 		k++
 
+		//fmt.Println("===========================responseContentBuf=====start")
+		//fmt.Println(string(responseContentBuf))
+		//fmt.Println("===========================responseContentBuf=====end")
 
+		fmt.Println("===========================leng=====start-for")
+		fmt.Println(leng)
+		fmt.Println("===========================leng=====end-for")
+
+		end := leng + n
 		if n > 0 {
 
-			response := string(responseContentBuf[leng:])
+			response := string(responseContentBuf[leng:end])
+			//fmt.Println("===========================response=====start")
+			//fmt.Println(response)
+			//fmt.Println("===========================response=====end")
 			s := strings.Split(response, "\r\n\r\n")
 
 			var content string
@@ -187,7 +216,9 @@ func main() {
 				content = s[0]
 				fileOffset += n-1
 			}
-
+			//fmt.Println("===========================content=====start")
+			//fmt.Println(content)
+			//fmt.Println("===========================content=====end")
 			newOffset = appendToFile(filename, content, newOffset)
 
 			leng += n
@@ -205,19 +236,19 @@ func main() {
 		}else{
 
 			fileSize2Int64 := getFileSize(filename)
-			fmt.Println("===========================fileSize2Int64=====start")
-			fmt.Println(fileSize2Int64)
-			fmt.Println("===========================fileSize2Int64=====end")
+			//fmt.Println("===========================fileSize2Int64=====start")
+			//fmt.Println(fileSize2Int64)
+			//fmt.Println("===========================fileSize2Int64=====end")
 			fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
 			fileSize2, _ := strconv.Atoi(fileSizeStr)
 
-			fmt.Println("===========================length2=====start")
-			fmt.Println(length2)
-			fmt.Println("===========================length2=====end")
-
-			fmt.Println("===========================fileSize2=====start")
-			fmt.Println(fileSize2)
-			fmt.Println("===========================fileSize2=====end")
+			//fmt.Println("===========================length2=====start")
+			//fmt.Println(length2)
+			//fmt.Println("===========================length2=====end")
+			//
+			//fmt.Println("===========================fileSize2=====start")
+			//fmt.Println(fileSize2)
+			//fmt.Println("===========================fileSize2=====end")
 
 			if fileSize == fileSize2 {
 				os.Remove(dbFile)
