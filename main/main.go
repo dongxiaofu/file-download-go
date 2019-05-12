@@ -173,7 +173,7 @@ func main() {
 	defer tcpConn.Close()
 
 	// 2 是 \r\n\r\n 的长度。为何不是4
-	length := length2 + headerLength + strings.Count("\r\n\r\n", "")
+	length := length2 + headerLength + strings.Count("\r\n\r\n", "") + 3000
 
 	fmt.Println("===========================length=====start")
 	fmt.Println(length)
