@@ -12,11 +12,12 @@ import (
 	"os"
 	"io/ioutil"
 	"flag"
+	"time"
 )
 
 /**
- go run main.go -host=chugang.net -path=/ -filename=index.html
- go run main.go -host=i1.whymtj.com -path=/uploads/tu/201904/9999/75880a6ff0.jpg?t==3337 -filename=g.jpg
+ go run main.go -host=chugang.net -path=/ -filename=index.html -sleep=0
+ go run main.go -host=i1.whymtj.com -path=/uploads/tu/201904/9999/75880a6ff0.jpg?t==3337 -filename=g9.jpg -sleep=0
  */
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 	hostParam := flag.String("host", "", "host, 必填")
 	pathParam := flag.String("path", "", "path，必填")
 	filenameParam := flag.String("filename", "", "filename，必填")
+	isSleepParam := flag.String("sleep", "0", "sleep,选题，默认为0")
 
 	flag.Parse()
 
@@ -49,7 +51,6 @@ func main() {
 	var filename = *filenameParam
 	var port string = "80"
 	address := host + ":" + port
-	fmt.Println(address)
 	// 发起 http 请求
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", address)
 
@@ -61,11 +62,11 @@ func main() {
 
 	var fileInfo fileMeta
 	fileInfo = fileMeta{
-		Url:      "1",
-		FileSize: 0,
+		Url:        "1",
+		FileOffset: 0,
+		FileSize:0,
 	}
 
-	//fmt.Println(fileInfo)
 	fileInfo.Url = address
 
 	checkError(err2)
@@ -80,8 +81,9 @@ func main() {
 	fileInfoString := readFile(dbFile)
 	if fileInfoString == "" {
 		fileInfo2 = fileMeta{
-			Url:      address,
-			FileSize: 0,
+			Url:        address,
+			FileOffset: 0,
+			FileSize:0,
 		}
 	} else {
 		var fileInfoJson = []byte(fileInfoString)
@@ -93,9 +95,9 @@ func main() {
 		}
 	}
 
-	if fileInfo2.FileSize != 0 {
+	if fileInfo2.FileOffset != 0 {
 		fmt.Println("yes")
-		rangeHeader := "Range:bytes=" + strconv.Itoa(fileInfo2.FileSize) + "-\r\n"
+		rangeHeader := "Range:bytes=" + strconv.Itoa(fileInfo2.FileOffset) + "-\r\n"
 		buffer.WriteString(rangeHeader)
 	}
 
@@ -103,18 +105,8 @@ func main() {
 	buffer.WriteString("Pragma: no-cache \r\n")
 	buffer.WriteString("Connection: keep-alive \r\n")
 
-	//buffer.WriteString("Range:bytes=1000-\r\n")
 	requestHeaderHost := "Host: " + host + "\r\n\r\n"
 	buffer.WriteString(requestHeaderHost)
-	//buffer.WriteString("Connection: keep-alive \r\n\r\n")
-	//buffer.WriteString("Pragma: no-cache \r\n\r\n")
-	//buffer.WriteString("Cache-Control: no-cache \r\n\r\n")
-	//buffer.WriteString("Upgrade-Insecure-Requests: 1 \r\n\r\n")
-	//buffer.WriteString("User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36 \r\n\r\n")
-	//buffer.WriteString("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3 \r\n\r\n")
-	//buffer.WriteString("Accept-Encoding: gzip, deflate \r\n\r\n")
-	//buffer.WriteString("Accept-Language: zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7 \r\n\r\n")
-
 	requestHeader := buffer.String()
 
 	_, err3 := tcpConn.Write([]byte(requestHeader))
@@ -128,41 +120,57 @@ func main() {
 
 	length2, headerLength := getResponseHeader(tcpConn2)
 
+	var fileOffset int
 	var fileSize int
 
-	fileSize = fileInfo2.FileSize
-
-	fmt.Println(fileSize)
+	fileOffset = fileInfo2.FileOffset
+	if fileInfo2.FileSize == 0 {
+		fileInfo2.FileSize = length2
+		fileSize = length2
+	}else{
+		//length2 = fileInfo2.FileSize
+		fileSize = fileInfo2.FileSize
+	}
 
 	defer tcpConn.Close()
 
-	length := length2 + headerLength
-	responseContentBuf := make([]byte, length, length)
+	// 2 是 \r\n\r\n 的长度。为何不是4
+	length := length2 + headerLength + 2
+
 	leng := 0
 	var k int
+	var newOffset int64 = 0
 	for {
+		length++
+		responseContentBuf := make([]byte, length)
+		fmt.Println("===========================k=====start")
+		fmt.Println(k)
+		fmt.Println("===========================k=====end")
 		n, _ := tcpConn.Read(responseContentBuf[leng:])
 		k++
+
+
 		if n > 0 {
 
-			response := string(responseContentBuf[leng:leng + n])
+			response := string(responseContentBuf[leng:])
 			s := strings.Split(response, "\r\n\r\n")
 
 			var content string
 			if len(s) == 2 {
 				content = s[1]
-				fileSize += n - headerLength
+				fileOffset += n - headerLength-1
 			}else{
 				content = s[0]
-				fileSize += n
+				fileOffset += n-1
 			}
 
-			appendToFile(filename, content)
+			newOffset = appendToFile(filename, content, newOffset)
 
 			leng += n
 
 			// 将文件信息保存到文件中
-			fileInfo.FileSize = fileSize
+			fileInfo.FileOffset = fileOffset
+			fileInfo.FileSize = fileInfo2.FileSize
 
 			b, err := json.Marshal(fileInfo)
 			if err != nil {
@@ -187,18 +195,18 @@ func main() {
 			fmt.Println(fileSize2)
 			fmt.Println("===========================fileSize2=====end")
 
-			if length2 - fileSize2 >= 0 && length2 - fileSize2 < 5 {
-				os.Remove(dbFile)
-			}
-
-			if fileSize2 - length2 >= 0 && fileSize2 - length2 < 5 {
+			if fileSize == fileSize2 {
 				os.Remove(dbFile)
 			}
 
 			break
 		}
 
-		//time.Sleep(time.Duration(40) * time.Second)
+
+		if *isSleepParam != "0" {
+			time.Sleep(time.Duration(40) * time.Second)
+		}
+
 	}
 
 	return
@@ -287,10 +295,7 @@ func getResponseHeader(conn net.Conn) (int, int)  {
 	header := string(buf)
 	header = strings.TrimSpace(header)
 	length := getResponseContentLength(header)
-	fmt.Println(header)
-	fmt.Println("=================")
 	s := strings.Split(header, "\r\n\r\n")
-	fmt.Println(s[0])
 	headerLength := strings.Count(s[0], "")
 
 	return length, headerLength
@@ -298,7 +303,7 @@ func getResponseHeader(conn net.Conn) (int, int)  {
 
 // fileName:文件名字(带全路径)
 // content: 写入的内容
-func appendToFile(fileName string, content string) error {
+func appendToFile(fileName string, content string, offset int64) (int64) {
 
 	//var f *os.File
 	//var err error
@@ -311,17 +316,22 @@ func appendToFile(fileName string, content string) error {
 
 	f, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
 
+	var newOffset int64 = 0
+
 	if err != nil {
 		fmt.Println("cacheFileList.yml file create failed. err: " + err.Error())
 	} else {
 		// 查找文件末尾的偏移量
-		n, _ := f.Seek(0, os.SEEK_END)
+		offset = 0
+		n, _ := f.Seek(offset, 2)
 		// 从末尾的偏移量开始写入内容
-		_, err = f.WriteAt([]byte(content), n)
+		n2, _ := f.WriteAt([]byte(content), n)
 		//_, err = f.WriteString(content)
+		newOffset = n + int64(n2)
+
 	}
 	defer f.Close()
-	return err
+	return newOffset
 }
 
 func getFileSize(filename string) int64  {
@@ -333,6 +343,7 @@ func getFileSize(filename string) int64  {
 }
 
 type fileMeta struct {
-	Url      string
+	Url        string
+	FileOffset int
 	FileSize int
 }
