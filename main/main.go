@@ -19,7 +19,7 @@ import (
  go run main.go -host=chugang.net -path=/ -filename=index.html -sleep=0
  go run main.go -host=i1.whymtj.com -path=/uploads/tu/201905/9999/f785f95cc1.jpg?t==3337 -filename=g9.jpg -sleep=0
 go run main.go -host=dev.cg.com -path=/t.json -filename=t.json -sleep=0
-395135
+go run main.go -host=8dx.pc6.com -path=/wwb6/lovelycat365.zip -filename=t.json -sleep=0
  */
 
 func main() {
@@ -79,15 +79,15 @@ func main() {
 	}
 
 	fileSize2Int64 := getFileSize(filename)
-	fmt.Println("===========================fileSize2Int64=====start")
-	fmt.Println(fileSize2Int64)
-	fmt.Println("===========================fileSize2Int64=====end")
+	//fmt.Println("===========================fileSize2Int64=====start")
+	//fmt.Println(fileSize2Int64)
+	//fmt.Println("===========================fileSize2Int64=====end")
 	fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
 	fileSize2, _ := strconv.Atoi(fileSizeStr)
 
-	//fmt.Println("===========================length2=====start")
-	//fmt.Println(fileInfo2.FileSize)
-	//fmt.Println("===========================length2=====end")
+	fmt.Println("===========================length2=====start")
+	fmt.Println(fileInfo2.FileSize)
+	fmt.Println("===========================length2=====end")
 
 	fmt.Println("===========================fileSize2=====start")
 	fmt.Println(fileSize2)
@@ -154,9 +154,14 @@ func main() {
 
 	length2, headerLength := getResponseHeader(tcpConn2)
 
-	fmt.Println("===========================length2=====start")
-	fmt.Println(length2)
-	fmt.Println("===========================length2=====end")
+	if length2 == fileSize2 {
+		fmt.Printf("已经下载过 %s \n", path)
+		return
+	}
+
+	//fmt.Println("===========================length2=====start")
+	//fmt.Println(length2)
+	//fmt.Println("===========================length2=====end")
 
 	var fileOffset int
 	var fileSize int
@@ -173,17 +178,17 @@ func main() {
 	defer tcpConn.Close()
 
 	// 2 是 \r\n\r\n 的长度。为何不是4
-	length := length2 + headerLength + strings.Count("\r\n\r\n", "") + 3000
+	length := length2 + headerLength + strings.Count("\r\n\r\n", "") + 9000 * 2
 
-	fmt.Println("===========================length=====start")
-	fmt.Println(length)
-	fmt.Println("===========================length=====end")
+	//fmt.Println("===========================length=====start")
+	//fmt.Println(length)
+	//fmt.Println("===========================length=====end")
 
 	responseContentBuf := make([]byte, length)
 	leng := 0
-	fmt.Println("===========================leng=====start")
-	fmt.Println(leng)
-	fmt.Println("===========================leng=====end")
+	//fmt.Println("===========================leng=====start")
+	//fmt.Println(leng)
+	//fmt.Println("===========================leng=====end")
 
 	var k int
 	var newOffset int64 = 0
@@ -197,9 +202,9 @@ func main() {
 
 		length++
 
-		fmt.Println("===========================k=====start")
-		fmt.Println(k)
-		fmt.Println("===========================k=====end")
+		//fmt.Println("===========================k=====start")
+		//fmt.Println(k)
+		//fmt.Println("===========================k=====end")
 
 		var n int
 		if len(newResponseContentBuf) > 0 {
@@ -211,15 +216,17 @@ func main() {
 			n, _ = tcpConn.Read(responseContentBuf[leng:])
 		}
 
+		fmt.Println(n)
+
 		k++
 
-		fmt.Println("===========================responseContentBuf=====start")
-		fmt.Println(string(responseContentBuf))
-		fmt.Println("===========================responseContentBuf=====end")
-
-		fmt.Println("===========================leng=====start-for")
-		fmt.Println(leng)
-		fmt.Println("===========================leng=====end-for")
+		//fmt.Println("===========================responseContentBuf=====start")
+		//fmt.Println(string(responseContentBuf))
+		//fmt.Println("===========================responseContentBuf=====end")
+		//
+		//fmt.Println("===========================leng=====start-for")
+		//fmt.Println(leng)
+		//fmt.Println("===========================leng=====end-for")
 
 		end := leng + n
 		if n > 0 {
@@ -247,13 +254,38 @@ func main() {
 
 			// 将文件信息保存到文件中
 			fileInfo.FileOffset = fileOffset
-			fileInfo.FileSize = fileInfo2.FileSize
+			fileInfo.FileSize = fileSize2
 
 			b, err := json.Marshal(fileInfo)
 			if err != nil {
 				fmt.Println("error: ", err, b)
 			}
 			saveToFile(string(b), dbFile)
+
+
+			fileSize2Int64 := getFileSize(filename)
+			//fmt.Println("===========================fileSize2Int64=====start")
+			//fmt.Println(fileSize2Int64)
+			//fmt.Println("===========================fileSize2Int64=====end")
+			fileSizeStr := strconv.FormatInt(fileSize2Int64, 10)
+			fileSize2, _ := strconv.Atoi(fileSizeStr)
+
+			//fmt.Println("===========================length2=====start")
+			//fmt.Println(length2)
+			//fmt.Println("===========================length2=====end")
+			//
+			//fmt.Println("===========================fileSize2=====start")
+			//fmt.Println(fileSize2)
+			//fmt.Println("===========================fileSize2=====end")
+
+			if fileInfo2.FileSize == fileSize2 {
+				os.Remove(dbFile)
+				break
+			}
+
+
+
+
 
 		}else{
 
@@ -279,12 +311,14 @@ func main() {
 			break
 		}
 
-		fmt.Printf("%d 次保存\n", k)
+		//fmt.Printf("%d 次保存\n", k)
 		if *isSleepParam != "0" {
 			time.Sleep(time.Duration(40) * time.Second)
 		}
 
 	}
+
+	fmt.Printf("下载文件 %s 完成\n", path)
 
 	return
 }
